@@ -18,15 +18,13 @@ class Sprite:
         self.x2 += dx
         self.y1 += dy
         self.y2 += dy
-    def touches(self, target):
-        return ((self.x1 <= target.x1 <= self.x2 and self.y1 <= target.y1 <= self.y2) or
-                (self.x1 <= target.x2 <= self.x2 and self.y1 <= target.y1 <= self.y2) or
-                (self.x1 <= target.x1 <= self.x2 and self.y1 <= target.y2 <= self.y2) or
-                (self.x1 <= target.x2 <= self.x2 and self.y1 <= target.y2 <= self.y2) or
-                (target.x1 <= self.x1 <= target.x2 and target.y1 <= self.y1 <= target.y2) or
-                (target.x1 <= self.x2 <= target.x2 and target.y1 <= self.y1 <= target.y2) or
-                (target.x1 <= self.x1 <= target.x2 and target.y1 <= self.y2 <= target.y2) or
-                (target.x1 <= self.x2 <= target.x2 and target.y1 <= self.y2 <= target.y2))
+
+    def stands_on(self, target):
+        return ((target.x2 > self.x1 > target.x1) or (target.x2 > self.x2 > target.x1)) and (target.y2 > self.y2 > target.y1)
+
+    def head_bump(self, target):
+        return ((target.x2 > self.x1 > target.x1) or (target.x2 > self.x2 > target.x1)) and (target.y2 > self.y1 > target.y1)
+
 
 class Player(Sprite):
     speedX: float
@@ -54,7 +52,7 @@ class Buff(Sprite):
     def activate(self, target):
         match self.effect:
             case 1:
-                target.jump_power *= 2
+                config.GRAVITY = 0
             case 2:
                 target.speedX *= 1.5
             case 3:
@@ -69,7 +67,7 @@ class Buff(Sprite):
     def deactivate(self, target):
         match self.effect:
             case 1:
-                target.jump_power /= 2
+                config.GRAVITY = 0.6
             case 2:
                 target.speedX /= 1.5
             case 3:
@@ -107,24 +105,34 @@ while game_running:
 
     match current_level:
         case 1:
-            gr_img1 = transform.scale(image.load('ground.png'), (config.SCREEN_WIDTH, config.SCREEN_HEIGHT * 0.07))
-            gr_img = transform.scale(image.load('ground.png'), (config.SCREEN_WIDTH * 0.8, config.SCREEN_HEIGHT * 0.07))
-            ground1 = Sprite(gr_img1, (0, config.SCREEN_HEIGHT * 0.93))
-            ground2 = Sprite(gr_img, (config.SCREEN_WIDTH * 0.2, config.SCREEN_HEIGHT * 0.65))
-            ground3 = Sprite(gr_img, (0, config.SCREEN_HEIGHT * 0.40))
+            gr_img1 = transform.scale(image.load('ground.png'), (config.SCREEN_WIDTH, config.SCREEN_HEIGHT * 0.05))
+            gr_img = transform.scale(image.load('ground.png'), (config.SCREEN_WIDTH * 0.7, config.SCREEN_HEIGHT * 0.05))
+            ground1 = Sprite(gr_img1, (0, config.SCREEN_HEIGHT * 0.95))
+            ground2 = Sprite(gr_img, (config.SCREEN_WIDTH * 0.3, config.SCREEN_HEIGHT * 0.75))
+            ground3 = Sprite(gr_img, (0, config.SCREEN_HEIGHT * 0.55))
+            ground4 = Sprite(gr_img1, (0, 0))
 
-            if player.touches(ground1) or player.touches(ground2) or player.touches(ground3):
+            jump_buff = Buff(image.load('jump_buff.png'), (config.SCREEN_WIDTH * 0.11, config.SCREEN_HEIGHT * 0.86), 5, 1)
+
+            if player.stands_on(ground1) or player.stands_on(ground2) or player.stands_on(ground3):
                 if keys[K_SPACE]:
                     player.speedY -= player.jump_power
                 else:
                     player.speedY = 0
+            elif player.head_bump(ground1) or player.head_bump(ground2) or player.head_bump(ground3) or player.head_bump(ground4):
+                player.speedY = 1
             else:
-                player.speedY += 0.6
+                player.speedY += config.GRAVITY
 
-            screen.fill((173, 133, 109))
+            if player.stands_on(jump_buff) or player.head_bump(jump_buff):
+                jump_buff.activate(player)
+
+            screen.fill((15, 15, 15))
+            screen.blit(jump_buff.img, (jump_buff.x1, jump_buff.y1))
             screen.blit(ground1.img, (ground1.x1, ground1.y1))
             screen.blit(ground2.img, (ground2.x1, ground2.y1))
             screen.blit(ground3.img, (ground3.x1, ground3.y1))
+            screen.blit(ground4.img, (ground4.x1, ground4.y1))
         case 2:
             pass
         case 3:
